@@ -1,0 +1,7 @@
+.env 
+.venv
+test_db
+test_neo_db
+postdb_docker
+__pycache__
+docker-compose.yaml
