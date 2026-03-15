@@ -20,6 +20,8 @@ TAVILY_API_KEY=getApiKey("TAVILY_API_KEY")
 OPENAI_API_KEY = getApiKey("OPENAI_API_KEY")
 OPENAI_MODEL = getApiKey("OPENAI_MODEL")
 OPENAI_EMBEDDING_MODEL = getApiKey("OPENAI_EMBEDDING_MODEL")
+GEMINI_MODEL = getApiKey("GEMINI_MODEL")
+GEMINI_API_KEY = getApiKey("GEMINI_API_KEY")
 
 SESSION_TTL = 60 * 60 * 24  # 1 day
 
@@ -28,3 +30,7 @@ VERIFY_PASS_URLS = [
     "/auth/google/url",
     "/api/callback/auth/google"
 ]
+
+MINIO_S3 = getApiKey("MINIO_S3")
+MINIO_USER = getApiKey("MINIO_USER")
+MINIO_PASSWORD = getApiKey("MINIO_PASSWORD")

@@ -24,7 +24,7 @@ user_service = UserService()
         }
     })
 async def google_login(req: GoogleLoginRequest, res: Response, conn=Depends(get_postdb_conn)):
-    session_id = await user_service.google_login_service(conn, req.id_token)
+    session_id = await user_service.google_login_service(req, conn, req.id_token)
 
     res.set_cookie(
         key="session_id",

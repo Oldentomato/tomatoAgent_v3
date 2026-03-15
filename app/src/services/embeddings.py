@@ -1,5 +1,5 @@
 from langchain_openai import OpenAIEmbeddings
-from app.config.settings import OPENAI_EMBEDDING_MODEL, OPENAI_API_KEY
+from config.settings import OPENAI_EMBEDDING_MODEL, OPENAI_API_KEY
 
 
 embeddings = OpenAIEmbeddings(

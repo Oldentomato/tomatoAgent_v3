@@ -16,7 +16,7 @@ class LLMResponse(BaseModel):
 class LLMResponseError(BaseModel):
     success: bool
     status_code: int
-    error_msg: str 
+    error_msg: str
 
-#######################
+
 

@@ -7,7 +7,6 @@ async def init_db_pool(app):
     app.state.postdb = await asyncpg.create_pool(POST_DATABASE_URL)
 
 
-
 async def get_postdb_conn(request: Request):
     pool = request.app.state.postdb
     if pool is None:

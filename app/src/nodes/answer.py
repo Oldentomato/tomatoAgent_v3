@@ -1,12 +1,12 @@
-from graph.state import State
-from src.services.llm import llm
-from src.utils.prompts import load_prompt
+from app.src.graph.state import UnifiedState
+from app.src.services.llm import get_llm_model
+from app.src.utils.prompts import load_prompt
 
 
 ANSWER_PROMPT = load_prompt("answer.md")
 
 
-async def answer_node(state: State) -> dict:
+async def answer_node(state: UnifiedState) -> dict:
     """
     tool 결과를 반영하여 최종 답변 생성
     """
@@ -18,7 +18,7 @@ async def answer_node(state: State) -> dict:
         context=context,
     )
 
-    answer = llm.invoke(prompt)
+    answer = get_llm_model("gemini").invoke(prompt)
 
     return {
         "final_answer": answer,

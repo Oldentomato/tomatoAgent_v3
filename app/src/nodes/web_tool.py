@@ -1,8 +1,8 @@
-from graph.state import State
-from src.tools.web_search import search as web_search
+from app.src.graph.state import UnifiedState
+from app.src.tools.web_search import search as web_search
 
 
-async def web_tool_node(state: State) -> dict:
+async def web_tool_node(state: UnifiedState) -> dict:
     """
     외부 인터넷 검색
     """
