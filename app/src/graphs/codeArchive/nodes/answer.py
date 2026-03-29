@@ -1,9 +1,9 @@
-from app.src.graph.state import UnifiedState
+from app.src.graphs.codeArchive.state import UnifiedState
 from app.src.services.llm import get_llm_model
 from app.src.utils.prompts import load_prompt
 
 
-ANSWER_PROMPT = load_prompt("answer.md")
+ANSWER_PROMPT = load_prompt("codeArchive", "answer.md")
 
 
 async def answer_node(state: UnifiedState) -> dict:

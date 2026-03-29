@@ -9,9 +9,7 @@ from app.db.minio_client import init_minio
 from app.db.redis_client import init_redis
 from app.middleware import auth_middleware
 from app.core.exception import AppException
-# from app.src.graphs.codeArchive.builder import code_archive_build_graph
-# from app.src.graphs.codeIngest.builder import code_ingest_build_graph
-from app.src.graph.builder import code_archive_graph
+from app.src.graphs.codeArchive.builder import code_archive_graph
 
 
 @asynccontextmanager

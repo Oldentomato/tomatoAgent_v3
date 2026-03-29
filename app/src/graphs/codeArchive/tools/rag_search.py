@@ -1,4 +1,3 @@
-from app.src.services.embeddings import embeddings
 from langchain_core.tools import tool
 from langchain_core.runnables import RunnableConfig
 
@@ -6,16 +5,8 @@ import faiss
 import pickle 
 import numpy as np
 
-@tool(parse_docstring=True)
-def add_content():
-    """사용자가 코드 저장을 허용한다면 이 도구를 사용할 것
 
-    Args:
-        query (str): 사용자의 질문
-
-    Returns:
-        str: JSON 문자열 
-    """
+def add_content(user_id, rag_minio):
     pass 
 
 

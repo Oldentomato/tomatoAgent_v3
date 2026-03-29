@@ -1,15 +1,14 @@
 from typing import Dict, Any
-import pickle
-import faiss
 import asyncio
+import pickle
 import numpy as np
+import time
 
 from langgraph.types import interrupt
 
-from app.src.graph.state import UnifiedState
+from app.src.graphs.codeArchive.state import UnifiedState
 from app.src.services.llm import get_llm_model
-from app.src.services.embeddings import embeddings
-from app.src.tools.rag_search import get_faiss_or_pickle
+from app.src.services.embeddings import get_embedding
 from app.src.utils.tool_logs import complete_tool_log, start_tool_log
 
 
@@ -17,34 +16,35 @@ async def generate_code_summary_node(state: UnifiedState, config) -> Dict[str, A
     """
     1단계: 코드에 대한 자동 설명 생성 노드
     - 입력: state["code"]
-    - 출력: state["auto_summary"], state["final_summary"](초기값은 auto_summary 복사)
+    - 출력: state["auto_summary"]
     """
     code = state["code"]
 
     prompt = f"""
-다음 소스코드가 무엇을 하는지 한국어로 3~5줄 정도로 요약해줘.
+다음 소스코드가 무엇을 하는지 한국어로 4~5줄 정도로 요약해줘.
 가능하면 함수/클래스 역할, 주된 비즈니스 로직을 구체적으로 써줘.
 
 {code}
 ```
 """
-    tool_log_id = start_tool_log(
-            state,
-            config,
-            "Generating code summary"
-        )
+    # tool_log_id = start_tool_log(
+    #         state,
+    #         config,
+    #         "Generating code summary"
+    #     )
 
     try:
         auto_summary = get_llm_model("gemini").invoke(prompt)
 
         new_state: UnifiedState = {
             **state,
-            "auto_summary": auto_summary,
-            "final_summary": state.get("final_summary") or auto_summary, #  “사람이 수정한 값이 있으면 그걸 쓰고, 없으면 자동 요약을 쓰자”는 의미
+            "auto_summary": auto_summary
+            # "final_summary": state.get("final_summary") or auto_summary, #  “사람이 수정한 값이 있으면 그걸 쓰고, 없으면 자동 요약을 쓰자”는 의미
         }
     finally:
-        complete_tool_log(new_state, config)
+        # complete_tool_log(new_state, config)
         await asyncio.sleep(0)
+
 
     return new_state
 
@@ -82,9 +82,10 @@ async def save_to_faiss_node(state: UnifiedState, config) -> Dict[str, Any]:
         # 저장하지 않고 그대로 반환
         return state
     user_id = state["user_id"]
-    rag_minio = state["rag_minio"]
+    rag_minio = config["configurable"]["minio_client"]
+    content_minio = config["configurable"]["rag_content_minio"]
     code = state["code"]
-    summary = state.get("final_summary") or state.get("auto_summary") or ""
+    summary = state.get("auto_summary")
     file_path = state.get("file_path") or "unknown"
     language = state.get("language") or "python"
     # ----- 1) 저장용 텍스트 구성 (설명 + 코드) -----
@@ -98,37 +99,47 @@ async def save_to_faiss_node(state: UnifiedState, config) -> Dict[str, Any]:
         {code}
     """.strip()
 
+
+    def generate_id(counter=[0]):
+        ts = int(time.time() * 1000)  # milliseconds
+        counter[0] = (counter[0] + 1) % 1000
+        return np.int64(ts * 1000 + counter[0])
+
     try:
-        # ----- 2) 임베딩 계산 -----
-        # OpenAIEmbeddings: embed_documents는 List[str] 입력
-        embedding_vector = embeddings.embed_documents([document_text])[0]
-        # ----- 3) 기존 Faiss index 로드 or 생성 -----
-        # get_faiss_or_pickle(user_id, rag_minio) 는 예시용; 실제 구현에 맞게 조정
-        index = get_faiss_or_pickle(user_id, rag_minio)
-        # index는 faiss.IndexIDMap 가정
-        # 간단히: user별 auto-increment id 대신, 여기선 hash 기반 id 예시
-        # (실제 환경에서는 별도의 content_id를 state로 받아서 사용하는 게 더 좋음)
-        content_id = faiss.IDSelectorBatch([hash(file_path + summary) & 0x7FFFFFFF])
-        # faiss는 (N, d) 형태의 float32 배열이 필요
+        
+        encode_content = get_embedding("gemini").embed_query(summary.content) #요약문만 임베딩
+        embed_content = np.array(encode_content).reshape(1, -1).astype("float32")
 
+        index = rag_minio.get(user_id=user_id, dim=embed_content.shape[1])
+        user_content = content_minio.get(user_id=user_id)
 
+        generate_key = generate_id()
+        ids = np.array([generate_key], dtype=np.int64)
 
-        vectors = np.array([embedding_vector], dtype="float32")
-        ids = np.array([hash(file_path + summary) & 0x7FFFFFFF], dtype="int64")
-        index.add_with_ids(vectors, ids)
-        # ----- 4) Minio(S3)에 index 저장 -----
-        # pickle.dumps 로 직렬화 후 user별 key에 저장
-        serialized_index = pickle.dumps(index)
-        # RAGSessionStore.put은 async 이므로 await
-        await rag_minio.put(user_id, serialized_index)
+        user_content[str(generate_key)] = document_text #저장은 전체 내용으로
+
+    
+        index.add_with_ids(embed_content, ids)
+
+        rag_minio.put(user_id, pickle.dumps(index))
+        content_minio.put(user_id, pickle.dumps(user_content))
+
+    except Exception as e:
+        return {
+            **state,
+            "error": str(e),
+            "error_node": "save_to_faiss_node"
+        }
 
     finally:
-        complete_tool_log(state, config)
+        # complete_tool_log(state, config)
         await asyncio.sleep(0)
+
+    print(state)
 
 
     return {
         **state,
         # 나중에 확인용 메타 정보 추가
-        "saved_content_id": int(ids[0]),
+        "saved_content_id": generate_key,
     }

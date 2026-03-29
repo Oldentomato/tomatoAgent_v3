@@ -1,33 +1,44 @@
-from typing import TypedDict, Literal, Optional, List, Dict, Any
-from app.repository.chat_repository import ChatRepository
-from asyncpg import Pool
-from app.minio.session_store import RAGSessionStore
+from typing import Optional, List, Dict, Any
+from langgraph.graph import MessagesState
 
-class CodeArchiveState(TypedDict):
-    # 대화 기록
-    messages: List[Dict[str, Any]]
 
-    # 어떤 tool을 사용할지 (단 하나)
-    tool_choice: Literal[
-        "rag_code_search",
-        "internet_search",
-        "none"
-    ]
+class UnifiedState(MessagesState):
+    # List of available tools for the agent to use
+    tools: list
+    # Conversation history between user and assistant
+    # messages: list
 
-    chat_repo: ChatRepository
+    tool_result: str
 
-    postdb: Pool
+    steps: List[Dict[str, str]] = []
+    tools: List[Any]
 
-    rag_minio: RAGSessionStore
+    # ingest
+    code: str                  # 사용자가 넣은 소스 코드
+    user_id: str               # 누구의 코드인지
+    summary: str
+    should_save: bool
 
-    # 유저 id 전달 입력
-    user_id: Optional[str]
+    # archive
+    history: List[str]
+    search_choice: str
 
-    # tool에 전달할 입력 (query)
-    tool_input: Optional[str]
+    auto_summary: Optional[str]   # LLM이 자동 생성한 설명
+    final_summary: Optional[str]  # 사람이 확인/수정한 최종 설명
 
-    # tool 실행 결과 (하나만 존재)
-    tool_result: Optional[str]
+    # routing
+    route: str
 
-    # 최종 답변
-    final_answer: Optional[str]
+    tool_logs: list
+
+
+                # tools=input_data.tools,
+                # messages=input_data.messages,
+                # code= "",
+                # user_id="aaaa", #user_id 
+                # rag_minio= rag_minio,
+                # file_path= "",
+                # language= "",
+                # auto_summary= "",
+                # final_summary= "",
+                # should_save= True

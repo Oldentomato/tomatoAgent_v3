@@ -3,7 +3,7 @@ from config.settings import TAVILY_API_KEY
 from app.core.exception import WebSearchToolError
 from langchain_core.tools import tool
 
-@tool(aprse_docstring=True)
+@tool(parse_docstring=True)
 async def search(query: str, k: int = 5) -> str:
     """질문의 내용에 대해 잘 모를경우 이 도구를 사용하여 웹에서 검색
 

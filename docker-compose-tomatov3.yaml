@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+  code-server:
+    image: lscr.io/linuxserver/code-server:latest
+    container_name: tomatov3-code
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - PASSWORD=qwer1234
+      - SUDO_PASSWORD=qwer1234
+      - DEFAULT_WORKSPACE=/main
+    volumes:
+      - /var/services/homes/oldentomato/vscode/tomatoAgentv3:/main
+    ports:
+      - 8440:8443
+      - 8000:8000
+    privileged: true
+    restart: unless-stopped

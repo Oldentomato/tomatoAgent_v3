@@ -1,7 +1,7 @@
 import boto3
 from botocore.client import Config
 from fastapi import Request
-from app.minio.session_store import RAGSessionStore
+from app.minio.session_store import RAGSessionStore, ContentSessionStore
 from config.settings import MINIO_S3, MINIO_USER, MINIO_PASSWORD
 
 
@@ -16,11 +16,20 @@ def init_minio(app):
     )
 
     app.state.rag_minio = RAGSessionStore(s3_client)
+    app.state.content_minio = ContentSessionStore(s3_client)
 
 
-def get_minio(request: Request):
+def get_rag_minio(request: Request):
     minio_client = request.app.state.rag_minio
 
     if minio_client is None:
         raise RuntimeError("Minio not initialized")
+    return minio_client
+
+def get_content_minio(request: Request):
+    minio_client = request.app.state.content_minio 
+
+    if minio_client is None:
+        raise RuntimeError("Minio not initialized")
+
     return minio_client
