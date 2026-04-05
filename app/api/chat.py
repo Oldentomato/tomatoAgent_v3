@@ -20,13 +20,11 @@ from ag_ui.core import (
 )
 from ag_ui.encoder import EventEncoder  # Encoder for converting events to SSE format
 from copilotkit import CopilotKitState  # Base state class from CopilotKit
-from ag_ui_langgraph import add_langgraph_fastapi_endpoint
 from copilotkit import LangGraphAGUIAgent
 
 
 from app.services.chat_service import ChatService
 from app.repository.chat_repository import ChatRepository
-from app.src.graphs.codeArchive.state import UnifiedState
 from app.db.neodb_pool import get_session
 from app.db.minio_client import get_rag_minio, get_content_minio
 
@@ -46,7 +44,7 @@ def get_code_ingest_graph(request: Request):
 @chat_router.post("/langgraph-agent")
 async def langgraph_agent_endpoint(input_data: RunAgentInput, request: Request, neo_db=Depends(get_session), rag_minio=Depends(get_rag_minio), content_minio=Depends(get_content_minio),  code_archive_graph=Depends(get_code_archive_graph)):
     
-    chat_repo = ChatRepository()
+    chat_repo = ChatRepository() #여기도 repo에 db를 넣는 방식으로 해서 Depends로 받아오도록 수정할것
     
     agent=LangGraphAGUIAgent( #추후에 얘를 request.app 으로 지정할것
         name="codeArchive",
@@ -57,7 +55,8 @@ async def langgraph_agent_endpoint(input_data: RunAgentInput, request: Request, 
                             "neo_db": neo_db,
                             "chat_repo": chat_repo,
                             "minio_client": rag_minio,
-                            "rag_content_minio": content_minio}
+                            "rag_content_minio": content_minio,
+                            "user_id": "aaa"}
         }
     )
 

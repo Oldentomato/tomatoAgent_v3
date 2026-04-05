@@ -1,4 +1,3 @@
-from sre_parse import State
 from langgraph.types import Command, interrupt
 from typing import Dict, Any
 from langchain_core.runnables import RunnableConfig
@@ -6,8 +5,7 @@ from langchain_core.messages import SystemMessage, AIMessage
 from pydantic import BaseModel, Field
 from typing import Literal
 from langgraph.graph import END
-
-from app.src.services.llm import get_llm_model
+from copilotkit.langgraph import copilotkit_emit_state 
 
 class RouteDecision(BaseModel):
     new_summary: str | None = Field(default=None, description="새로운 코드 설명을 제공해 줄 경우")
@@ -20,39 +18,15 @@ async def check_process_node(state: Dict[str, Any], config: RunnableConfig):
     # 내용을 저장하지 않는다고 하면 그대로 대화를 종료하십시오.
     # """
 
-    route_prompt = """
-        당신은 현재 사용자의 입력에 따른 다음 행동의 결정을 내려야합니다.
-        당신은 사용자에게 코드를 저장할 것인지 질문한 상태입니다.
-        아래 두 가지의 선택지의 조건을 확인하고 적절한 결정을 선택해주세요.
-        - save: 새로운 코드내용을 제공해주거나, 긍정적인 답변이 나왔을 경우
-        - not_save: 부정적인 답변이 나왔을 경우
+    await copilotkit_emit_state(config, state) 
 
-        다음 내용을 보고 적절한 답변을 해주고, **오직 위의 2가지 결정만을 답하세요.**
-    """
+    payload = {
+        "instruction": "요약을 확인하고, 수정이 필요하면 수정본을 넣어주세요.",
+        "auto_summary": state.get("auto_summary")
+    }
 
-    # Check if we already have a user_response in the state
-    # This happens when the node restarts after an interrupt
-    #이미 대화내역에 요청이 있을경우 그대로 진행
-    # if "user_response" in state and state["user_response"]:
-    #     user_response = state["user_response"]
-    # else:#없을경우 interrupt를 통해 사용자의 답을 얻고 진행을함
-    #     # Use LangGraph interrupt to get user input on steps
-    #     # This will pause execution and wait for user input in the frontend
-    #     user_response = interrupt({"auto_summary": state["auto_summary"]})
-    #     # Store the user response in state for when the node restarts
-    #     state["user_response"] = user_response
-
-    # decision = await get_llm_model("gemini").with_structured_output(RouteDecision).ainvoke(
-    #     [
-    #         SystemMessage(content=route_prompt),
-    #         user_response
-    #     ]
-    # )
-
-    print(state)
-
-    user_response = interrupt({"auto_summary": state["auto_summary"]})
-    print(user_response)
+    user_response = interrupt(payload)
+    print(f"user_response: {user_response}")
     new_summary = user_response["new_summary"] # or None
     save_route = user_response["save_allow"]
 

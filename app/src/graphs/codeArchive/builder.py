@@ -3,14 +3,6 @@ from langgraph.checkpoint.memory import InMemorySaver
 
 from app.src.graphs.codeArchive.state import UnifiedState
 
-
-
-from langgraph.graph import END
-
-# from app.src.nodes.search_approval_node import ask_search_method_node
-# from app.src.nodes.route_search import route_by_search_choice
-# from app.src.nodes.rag_tool import rag_tool_node
-# from app.src.nodes.web_tool import web_tool_node
 from app.src.graphs.codeArchive.tools import web_search, rag_search
 from langgraph.prebuilt import ToolNode, tools_condition
 from app.src.graphs.codeArchive.nodes.routing import supervisor_router
@@ -28,8 +20,9 @@ from app.src.services.llm import get_llm_model
 def code_archive_graph():
     builder = StateGraph(UnifiedState)
 
-    # builder.add_node("load_history", load_chat_history)
-    builder.add_node("supervisor", supervisor_router)
+    builder.add_node("load_history", load_chat_history) # neo4j에서 대화내역 가져오기
+    builder.add_node("persist", persist_chat_turn) # neo4j로 대화내역 저장하기
+    builder.add_node("supervisor", supervisor_router) #저장할지 검색할지 판단
     
     builder.set_entry_point("supervisor")
 
@@ -52,22 +45,20 @@ def code_archive_graph():
     llm = get_llm_model("gemini")
     llm_with_tools = llm.bind_tools(search_tools)
 
+    
+
 
     # code ingest route
     builder.add_node("generate_summary", generate_code_summary_node)
     builder.add_node("check_process_node", check_process_node)
     builder.add_node("save_to_faiss", save_to_faiss_node)
 
-    builder.add_edge("generate_summary", "check_process_node")
+    builder.add_edge("generate_summary", "check_process_node") # 이 내부에서 결정됨
 
-
-    # builder.add_edge("save_to_faiss", END) #이미 check_process_node에서 route가 결정됨
+    builder.add_edge("save_to_faiss", END) #check다음에 save로 가고 그다음은 끝냄(추후에 answer노드 따로만들것)
 
 
     # code retrieve route
-    # builder.add_node("ask_search_method", ask_search_method_node)
-    # builder.add_node("rag_tool", rag_tool_node)
-    # builder.add_node("web_tool", web_tool_node)
     def condition_node(state):
         """
         여기서는 tool을 직접 실행하지 않는다.
@@ -80,22 +71,12 @@ def code_archive_graph():
     tool_node = ToolNode(search_tools)
     builder.add_node("tools", tool_node)
     builder.add_node("answer", answer_node)
-    # builder.add_node("persist", persist_chat_turn)
 
 
-    # builder.add_conditional_edges(
-    #     "ask_search_method",
-    #     route_by_search_choice,
-    #     {
-    #         "rag": "rag_tool",
-    #         "web": "web_tool",
-    #         "end": END,
-    #     }
-    # )
-
-    # agent 결과를 보고:
-    # - tool call이 있으면 -> tools
-    # - 없으면 -> END
+    # 구조 변경
+    # 먼저 archive에서 검색하고 그 결과를 분석
+    # 사용자의 질문에 맞는 코드인거 같으면 그대로 출력
+    # 그게 아니라면 아닌것 같다고 말하고 인터넷으로 검색할지 물어보는 노드를 추가(interrupt)
     builder.add_conditional_edges(
         "condition_node",
         tools_condition,
@@ -105,8 +86,8 @@ def code_archive_graph():
         },
     )
 
-    # builder.add_edge("rag_tool", "answer")
-    # builder.add_edge("web_tool", "answer")
+
+
     builder.add_edge("answer", END)
     # builder.add_edge("persist", END)
 

@@ -1,6 +1,7 @@
 from typing import Literal
 from pydantic import BaseModel
 from langchain_core.messages import SystemMessage
+from copilotkit.langgraph import copilotkit_emit_state 
 
 from app.src.graphs.codeArchive.state import UnifiedState
 from app.src.utils.prompts import load_prompt
@@ -10,7 +11,10 @@ from app.src.utils.get_last_msg import extract_last_user_message
 class RouteDecision(BaseModel):
     route: Literal["ingest", "archive"]
 
-async def supervisor_router(state: UnifiedState):
+async def supervisor_router(state: UnifiedState, config):
+
+    await copilotkit_emit_state(config, state) 
+
     messages = state["messages"]
 
     # 마지막 user message 찾기

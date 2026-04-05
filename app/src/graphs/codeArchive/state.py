@@ -15,7 +15,6 @@ class UnifiedState(MessagesState):
 
     # ingest
     code: str                  # 사용자가 넣은 소스 코드
-    user_id: str               # 누구의 코드인지
     summary: str
     should_save: bool
 
@@ -30,15 +29,3 @@ class UnifiedState(MessagesState):
     route: str
 
     tool_logs: list
-
-
-                # tools=input_data.tools,
-                # messages=input_data.messages,
-                # code= "",
-                # user_id="aaaa", #user_id 
-                # rag_minio= rag_minio,
-                # file_path= "",
-                # language= "",
-                # auto_summary= "",
-                # final_summary= "",
-                # should_save= True

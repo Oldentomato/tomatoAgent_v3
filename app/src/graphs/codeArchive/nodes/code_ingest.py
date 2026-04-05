@@ -10,6 +10,7 @@ from app.src.graphs.codeArchive.state import UnifiedState
 from app.src.services.llm import get_llm_model
 from app.src.services.embeddings import get_embedding
 from app.src.utils.tool_logs import complete_tool_log, start_tool_log
+from copilotkit.langgraph import copilotkit_emit_state 
 
 
 async def generate_code_summary_node(state: UnifiedState, config) -> Dict[str, Any]:
@@ -27,11 +28,8 @@ async def generate_code_summary_node(state: UnifiedState, config) -> Dict[str, A
 {code}
 ```
 """
-    # tool_log_id = start_tool_log(
-    #         state,
-    #         config,
-    #         "Generating code summary"
-    #     )
+
+    await copilotkit_emit_state(config, state) 
 
     try:
         auto_summary = get_llm_model("gemini").invoke(prompt)
@@ -48,12 +46,15 @@ async def generate_code_summary_node(state: UnifiedState, config) -> Dict[str, A
 
     return new_state
 
-
-def confirm_before_save_node(state: UnifiedState) -> Dict[str, Any]:
+async def confirm_before_save_node(state: UnifiedState, config) -> Dict[str, Any]:
     """
     AG-UI용: 요약 확인 후 저장 여부 입력을 받기 위해 interrupt() 호출.
     재개 시 Command(resume={ "should_save": bool, "final_summary": str }) 가 반환됨.
     """
+
+    await copilotkit_emit_state(config, state) 
+
+
     payload = {
         "instruction": "요약을 확인하고, 수정이 있으면 final_summary에 넣어 주세요. 저장하려면 should_save를 true로 보내세요.",
         "auto_summary": state.get("auto_summary") or "",
@@ -78,10 +79,10 @@ async def save_to_faiss_node(state: UnifiedState, config) -> Dict[str, Any]:
     2단계: (사람이 설명을 확인/수정한 후) 최종 요약 + 코드 → 임베딩 → Faiss + Minio 저장
     should_save가 False면 아무 것도 하지 않고 통과
     """
-    if not state.get("should_save"):
-        # 저장하지 않고 그대로 반환
-        return state
-    user_id = state["user_id"]
+    
+    await copilotkit_emit_state(config, state) 
+
+    user_id = config["configurable"]["user_id"]
     rag_minio = config["configurable"]["minio_client"]
     content_minio = config["configurable"]["rag_content_minio"]
     code = state["code"]
@@ -134,8 +135,6 @@ async def save_to_faiss_node(state: UnifiedState, config) -> Dict[str, Any]:
     finally:
         # complete_tool_log(state, config)
         await asyncio.sleep(0)
-
-    print(state)
 
 
     return {

@@ -6,6 +6,8 @@ from app.schema.user_model import GoogleLoginRequest, GoogleLoginResponse, UserL
 from app.core.exception import GoogleCodeMissError
 
 user_router = APIRouter()
+
+# 이 서비스를 함수화하여 Depends로 받을수있게 수정할것
 user_service = UserService()
 
 

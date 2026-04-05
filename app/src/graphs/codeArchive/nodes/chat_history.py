@@ -1,5 +1,7 @@
 from app.src.graphs.codeArchive.state import UnifiedState
 
+from copilotkit.langgraph import copilotkit_emit_state 
+
 async def load_chat_history(state: UnifiedState, config):
     """
     그래프 시작 시 호출 — Neo4j에서 최근 대화 로드
@@ -7,6 +9,8 @@ async def load_chat_history(state: UnifiedState, config):
     chat_repo = config["configurable"]["chat_repo"]
     db = config["configurable"]["neo_db"]
     conversation_id = config["configurable"]["thread_id"]
+
+    await copilotkit_emit_state(config, state) 
 
     """
     MERGE를 이용하여
